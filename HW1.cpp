@@ -6,6 +6,42 @@
 #include <string>
 #include <vector>
 
+std::string binary(int value)
+{
+    std::string result;
+    while (value != 0)
+    {
+        result += std::to_string(value % 2);
+        value /= 2;
+    }
+    while ((result.size() % 8) != 0)
+        result.push_back('0');
+    std::reverse(result.begin(), result.end());
+    return result;
+}
+
+std::string lblock_shift(std::string& txt, int shift)
+{
+    std::string piece = txt.substr(0, shift);
+    std::bitset<8 * 6> block(txt);
+    block <<= shift;
+    std::string new_txt = block.to_string();
+    new_txt.erase(txt.size() - shift, piece.size());
+    new_txt.insert(txt.size() - shift, piece);
+    return new_txt;
+}
+
+std::string rblock_shift(std::string& txt, int shift)
+{
+    std::string piece = txt.substr(txt.size() - shift, shift);
+    std::bitset<8 * 6> block(txt);
+    block >>= shift;
+    std::string new_txt = block.to_string();
+    new_txt.erase(0, shift);
+    new_txt.insert(0, piece);
+    return new_txt;
+}
+
 int main(int argc, char *argv[])
 {
     // 1) Creating text which needs to encrypt 

@@ -12,9 +12,9 @@ struct block
 };
 
 /*функция для конвертации строки в ввектор с заданными блоками*/
-void constructor(std::string& input, std::vector<block>& to_vec, size_t size_of_block)
+void constructor(std::string& input, std::vector<block>& to_vec, size_t size_of_block, int& secret_key)
 {
-
+    std::srand(secret_key);
     int num_of_block = 0;
 
     if (input.size() % size_of_block != 0)                          /*определяем размерность массива*/
@@ -26,10 +26,10 @@ void constructor(std::string& input, std::vector<block>& to_vec, size_t size_of_
     {
         for (int i = 0; i < size_of_block; i++)
         {
-
             if (input.empty())                                      /*если больше нечего класть в вектор, реализуем заглушку*/
             {
-                unsigned char go_to = std::rand() % 93 + 33;
+                std::srand(secret_key);
+                unsigned char go_to = std::rand() % 26 + 161;
                 to_vec[num_of_block].part[i] = go_to;
             }
             else
@@ -107,10 +107,10 @@ block operator<<(block& current, size_t num_of_shift)
 /*реализация алгоритма шифрования*/
 void do_encrypting(std::vector<block>& vec, size_t size_of_shift, std::string side, int& secret_key)
 {
+    
     for (int i = 0; i < vec.size(); i++)
     {
         std::srand(secret_key);
-
         block current;                                   /*создаю временный блок для реализации перегрузки оператора ^*/
         for (int j = 0; j < vec[i].part.size(); j++)
             current.part.push_back(vec[i].part[j]);      /*перевожу все значения блока во временный блок*/
@@ -128,18 +128,21 @@ void do_encrypting(std::vector<block>& vec, size_t size_of_shift, std::string si
             current = current << size_of_shift;              
 
         for (int k = 0; k < vec[i].part.size(); k++)     /*заменяю значения исходного блока на значения запишфрованного блока*/
-            vec[i].part[k] = current.part[k];            
+            vec[i].part[k] = current.part[k];         
+
+        secret_key += std::rand() % 201;
     }
 
 }
 
 /*реализация алгоритма дешифрования*/
-void do_decrypting(std::vector<block>& vec, size_t size_of_shift, std::string side, int& secret_key, int size_of_text)
+void do_decrypting(std::vector<block>& vec, size_t size_of_shift, std::string side, int& secret_key)
 {
+    int curretn = secret_key;
+
     for (int i = 0; i < vec.size(); i++)
     {
         std::srand(secret_key);
-
         block current;
 
         for (int j = 0; j < vec[i].part.size(); j++)      /*копирую блок во временный массив для удобства в дешифровкe*/
@@ -159,28 +162,24 @@ void do_decrypting(std::vector<block>& vec, size_t size_of_shift, std::string si
 
         for (int k = 0; k < vec[i].part.size(); k++)
             vec[i].part[k] = current.part[k];
+
+        secret_key += std::rand() % 201;
     }
 
-    /*отрезвем заглушку*/
+    /*отрезaем заглушку*/
+    std::srand(curretn);
+
     int count = 0;
+    unsigned char closer = std::rand() % 26 + 161;
+
     for (int i = 0; i < vec.size(); i++)
         for (int j = 0; j < vec[i].part.size(); j++)
-        {
-            count++;
-            if (size_of_text == count)
-            {
-
-                int k = j + 1;
-                int delta = vec[i].part.size() - k;
-                while (delta != 0)
+            if (vec[i].part[j] == closer)
+                for (int k = j; k < vec[i].part.size(); k++)
                 {
                     vec[i].part.erase(vec[i].part.begin() + k);
-                    delta--;
+                    k--;
                 }
-                break;
-            }
-        }
-
 }
 
 /*перегрузка оператора для считывания текста из файла*/
@@ -216,7 +215,7 @@ void bin_out(std::ofstream& output, std::vector<block>& vec)
 {
     for (int i = 0; i < vec.size(); i++)
         for (int j = 0; j < vec[i].part.size(); j++)
-            output.write((char*)&vec[i].part[j], sizeof(vec[i].part[j]));
+            output.write(reinterpret_cast<char*>(&vec[i].part[j]), sizeof(vec[i].part[j]));
 }
 
 /*считывание текста из бинарного файла*/
@@ -230,7 +229,7 @@ void bin_in(std::ifstream& input, std::string& str)
         std::vector<unsigned char> vec;
         while (!input.eof())
         {
-            input.read((char*)&k, sizeof(k));
+            input.read(reinterpret_cast<char*>(&k), sizeof(k));
             vec.push_back(k);
         }
 
@@ -241,30 +240,35 @@ void bin_in(std::ifstream& input, std::string& str)
     }
 }
 
-        /*arg_counts----arg_values*/
+/*зашифровать: */
+/*C:\Users\User\source\repos\HW1\Debug\HW1.exe C:\Users\User\source\repos\HW1\HW1\HW1.txt C:\Users\User\source\repos\HW1\HW1\Decrypted.txt encrypt 12 left 5 5*/
+
+/*расшифровать: */
+/*C:\Users\User\source\repos\HW1\Debug\HW1.exe C:\Users\User\source\repos\HW1\HW1\Decrypted.txt C:\Users\User\source\repos\HW1\HW1\Encrypted.txt decrypt 12 left 5 5*/
+
 int main(int argc, char* argv[])
 {
 
     /*===================================================================================================*/
-    /* иниициализация */
 
-    std::string input_file = argv[1];                                                           /*путь к файлу*/
+    std::string input_file = argv[1];                                           /*название входного файла*/
 
-    std::string command = argv[2];                                                              /*название команды (encrypt/decrypt)*/
+    std::string output_file = argv[2];                          /*название файла для получения результата*/
 
-    int size_of_text = std::stoi(argv[3]);                                                      /*размер шифруемого текста*/
+    std::string command = argv[3];                                   /*название команды (encrypt/decrypt)*/
 
-    size_t size_of_block = std::stoi(argv[4]);                                                  /*размер блока*/
+    size_t size_of_block = std::stoi(argv[4]);                                             /*размер блока*/
 
-    std::string side = argv[5];                                                                 /*в какую сторону производится сдвиг при шифровании*/
+    std::string side = argv[5];                       /*в какую сторону производится сдвиг при шифровании*/
 
-    size_t size_of_shift = std::stoi(argv[6]);                                                  /*размер сдвига*/
+    size_t size_of_shift = std::stoi(argv[6]);                                            /*размер сдвига*/
 
-    int secret_key = std::stoi(argv[7]);                                                        /*ключ криптосистемы*/
+    int secret_key = std::stoi(argv[7]);                                             /*ключ криптосистемы*/
 
     /*===================================================================================================*/
 
-    std::string get_text;                                                                       /*переменная для получения текста*/
+    std::string get_text;                                               /*переменная для получения текста*/
+    unsigned char to_text;
 
     if (command == "encrypt")
     {
@@ -280,13 +284,13 @@ int main(int argc, char* argv[])
 
         /*конвертирую строчку в массив, одновременно разделяя их на блоки*/
         std::vector<block> input_vector;
-        constructor(get_text, input_vector, size_of_block);
+        constructor(get_text, input_vector, size_of_block, secret_key);
 
         /*осуществление процесса шифрования текста*/
         do_encrypting(input_vector, size_of_shift, side, secret_key);
 
         /*запись зашифрованного текста в файл*/
-        std::ofstream OutputBinary("Plaintext.txt", std::ios::binary);
+        std::ofstream OutputBinary(output_file, std::ios::binary);
         bin_out(OutputBinary, input_vector);
         OutputBinary.close();
         
@@ -301,13 +305,13 @@ int main(int argc, char* argv[])
 
         /*конвертация полученной строки*/
         std::vector<block> input_vec;
-        constructor(input, input_vec, size_of_block);
+        constructor(input, input_vec, size_of_block, secret_key);
 
-        /*дешифруем текст*/
-        do_decrypting(input_vec, size_of_shift, side, secret_key, size_of_text);
+        /*расшифровываем текст*/
+        do_decrypting(input_vec, size_of_shift, side, secret_key);
 
         /*создаю файл для копирования расшифрованного сообщения*/
-        std::ofstream Decrypted_text("Decrypted.txt", std::ios::out);
+        std::ofstream Decrypted_text(output_file, std::ios::out);
         Decrypted_text << input_vec;
         Decrypted_text.close();
     }

@@ -28,8 +28,7 @@ void constructor(std::string& input, std::vector<block>& to_vec, size_t size_of_
         {
             if (input.empty())                                      /*если больше нечего класть в вектор, реализуем заглушку*/
             {
-                std::srand(secret_key);
-                unsigned char go_to = std::rand() % 26 + 161;
+                unsigned char go_to = std::rand() % 25 + 0;
                 to_vec[num_of_block].part[i] = go_to;
             }
             else
@@ -170,7 +169,7 @@ void do_decrypting(std::vector<block>& vec, size_t size_of_shift, std::string si
     std::srand(curretn);
 
     int count = 0;
-    unsigned char closer = std::rand() % 26 + 161;
+    unsigned char closer = std::rand() % 25 + 0;
 
     for (int i = 0; i < vec.size(); i++)
         for (int j = 0; j < vec[i].part.size(); j++)
@@ -293,6 +292,8 @@ int main(int argc, char* argv[])
         std::ofstream OutputBinary(output_file, std::ios::binary);
         bin_out(OutputBinary, input_vector);
         OutputBinary.close();
+
+        std::cout << "Encryption was finished successfully.\n";
         
     }
     else
@@ -314,6 +315,8 @@ int main(int argc, char* argv[])
         std::ofstream Decrypted_text(output_file, std::ios::out);
         Decrypted_text << input_vec;
         Decrypted_text.close();
+
+        std::cout << "Decryption was finished successfully.\n";
     }
         
     return 0;
